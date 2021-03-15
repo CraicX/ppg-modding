@@ -1,0 +1,19 @@
+{
+  "Name": "DebugX",
+  "Author": "JohnnyTaco",
+  "Description": "For debugging mods",
+  "ModVersion": "1.00",
+  "GameVersion": "1.11+",
+  "ThumbnailPath": "thumb.png",
+  "EntryPoint": "DebugX.DebugX",
+  "Tags": [
+    "mod debugging"
+  ],
+  "Scripts": [
+    "DebugX.cs",
+    "ObjectDumper.cs"
+  ],
+  "Active": true,
+  "UGCIdentity": null,
+  "CreatorUGCIdentity": null
+}
