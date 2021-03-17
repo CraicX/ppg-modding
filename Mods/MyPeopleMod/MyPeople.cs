@@ -19,16 +19,16 @@ namespace MyPeople
 
 
             //
-            //  Call function to handle initializing our new peoplePeoples
+            //  Call function to handle initializing our new people
             //
-            //  Instead of repeating lines of code for each person, you could
-            //  create a function to do this.  In this example, we simply need to 
-            //  pass the function the name filename of the persons skin png (without extension)
+            //  Instead of repeating lines of code for each person, 
+            //  you could create a function to do this.  In this example, we simply need to 
+            //  pass the function the filename of the persons skin png (without extension)
             //
-            //  I added a 3rd parameter to allow my to define any additional clothes the person
+            //  I added a 3rd parameter to allow me to define any additional clothes
             //  the person is wearing so it can automatically initialize, spawn and attach those to the person.
             //  
-            //  I can include any amount of clothes separated by a comma.
+            //  it allows me to include any amount of clothes I want, separated by a comma.
             //  And then leading each piece of clothing we put the body part it attaches to before the colon.
             //
             //  If the clothes overlap, list them in order so the last clothes listed are on top
@@ -97,6 +97,7 @@ namespace MyPeople
                                 
                                 clothingObject.transform.localScale = new Vector3(1f, 1f);
 
+                                //  This is how we are defining which piece of clothing to show above another
                                 clothingSprite.sortingOrder += itemNumber;
 
                             }
