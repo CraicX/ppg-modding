@@ -10,3 +10,5 @@ https://joplinapp.org/
 Official People Playground Modding Wiki is here:
 https://www.studiominus.nl/ppg-modding/
 
+Official People Playground Snippets Repo:
+https://github.com/mestiez/ppg-snippets
