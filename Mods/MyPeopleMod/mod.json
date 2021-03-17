@@ -1,0 +1,16 @@
+{
+  "Name": "My People Mod",
+  "Author": "JohnnyTaco",
+  "Description": "Example for Adding New People to PPG ",
+  "ModVersion": "1.0",
+  "GameVersion": "1.11+",
+  "ThumbnailPath": "thumb.png",
+  "EntryPoint": "MyPeople.MyPeople",
+  "Tags": [
+    "people,clothes"
+  ],
+  "Scripts": [
+    "MyPeople.cs",
+    "CategoryBuilder.cs"
+  ]
+}
