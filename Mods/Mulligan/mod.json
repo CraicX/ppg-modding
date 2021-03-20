@@ -2,7 +2,7 @@
   "Name": "Mulligan",
   "Author": "JohnnyTaco",
   "Description": "Utility mod for controlling, flipping, tweaking, resetting items",
-  "ModVersion": "1.16",
+  "ModVersion": "1.17",
   "GameVersion": "1.11+",
   "ThumbnailPath": "thumb.png",
   "EntryPoint": "Mulligan.Mulligan",

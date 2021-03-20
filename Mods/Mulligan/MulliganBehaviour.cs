@@ -1,10 +1,10 @@
-//using System;
-using UnityEngine;
-//using UnityEngine.SceneManagement;
+using System;
 using System.Collections.Generic;
-//using System.Collections;
-//using System.IO;
-//using Newtonsoft.Json;
+using System.IO;
+using UnityEngine;
+using UnityEngine.Events;
+using Newtonsoft.Json;
+
 
 namespace Mulligan
 { 
@@ -14,12 +14,13 @@ namespace Mulligan
 
         private static ObjectState[] SavedScene;
         private static List<LayeringOrder> SortingLayersList = new List<LayeringOrder>();
-        private int ApplyLayerOrdering                       = 0;
+        public int ApplyLayerOrdering                       = 0;
         private List<Flipper> FlippingAholes                 = new List<Flipper>();
         private List<int> NoFlip                             = new List<int>();
         public static bool SlightMovement                    = false;
         public static float Intensity                        = 1f;
         public static float Speed                            = 1f;
+        private static int LastSceneNumber                   = 1;
 
 
         public struct LayeringOrder 
@@ -53,7 +54,7 @@ namespace Mulligan
 
             }
 
-            bool winKeyPressed = (Input.GetKey(KeyCode.LeftWindows));
+            bool winKeyPressed = (Input.GetKey(KeyCode.LeftWindows) || Input.GetKey(KeyCode.RightAlt));
             bool altKeyPressed = (Input.GetKey(KeyCode.LeftAlt));
 
             if (!altKeyPressed)
@@ -142,18 +143,73 @@ namespace Mulligan
                 else if (Input.GetKeyUp(Mulligan.SceneSave.keyCode))
                 {
 
-                    //
-                    //  Save Scene
-                    //
-                    SceneSave();
+                    if (winKeyPressed)
+                    {
+                        DialogBox dialog = (DialogBox)null;
+                        dialog = DialogBoxManager.TextEntry(
+                            "Save to which scene #? (0-9)",
+                            LastSceneNumber.ToString(),
+                            new DialogButton("Save", true, new UnityAction[1]
+                            {
+                                (UnityAction) (() => SaveSceneNum(dialog))
+                            }), new DialogButton("Cancel", true, (UnityAction[]) Array.Empty<UnityAction>()));
+
+                        
+                        void SaveSceneNum(DialogBox d)
+                        {
+                            string intext = d.EnteredText;
+                            if (intext == "") intext = LastSceneNumber.ToString();
+
+                            if (int.TryParse(intext, out int sceneNumber)
+                                && (sceneNumber >= 0 || sceneNumber <= 9)) SceneSaveAsContraption(sceneNumber);
+                            
+                           else NotificationControllerBehaviour.Show("Invalid Scene #! Try (0-9)");
+
+                        }
+                    }
+                    else
+                    {
+
+                        //
+                        //  Save Scene
+                        //
+                        SceneSave();
+                    }
 
                 }
                 else if (Input.GetKeyUp(Mulligan.SceneReset.keyCode))
                 {
-                    //
-                    //  Restore Scene
-                    //
-                    SceneRestore(Mulligan.ModOptions.clearBeforeRestoring);
+
+                    if (winKeyPressed)
+                    {
+                        DialogBox dialog = (DialogBox)null;
+                        dialog = DialogBoxManager.TextEntry(
+                            "Load which scene #? (0-9)",
+                            LastSceneNumber.ToString(),
+                            new DialogButton("Load", true, new UnityAction[1]
+                            {
+                                (UnityAction) (() => LoadSceneNum(dialog))
+                            }), new DialogButton("Cancel", true, (UnityAction[]) Array.Empty<UnityAction>()));
+
+                        void LoadSceneNum(DialogBox d)
+                        {
+                            string intext = d.EnteredText;
+                            if (intext == "") intext = LastSceneNumber.ToString();
+
+                            if (int.TryParse(intext, out int sceneNumber)
+                                && (sceneNumber >= 0 || sceneNumber <= 9)) SceneLoadAsContraption(sceneNumber);
+
+                            else NotificationControllerBehaviour.Show("Invalid Scene #! Try (0-9)");
+
+                        }
+                    }
+                    else
+                    {
+                        //
+                        //  Restore Scene
+                        //
+                        SceneRestore(Mulligan.ModOptions.clearBeforeRestoring);
+                    }
 
                 }
 
@@ -185,12 +241,12 @@ namespace Mulligan
         //
         public void RandomExperiments()
         {
-
+            SetToBackground(1);
         }
 
         public void RandomExperiments2()
         {
-
+            SetToBackground(-1);
         }
 
 
@@ -413,7 +469,7 @@ namespace Mulligan
             countedItems++;
         }
 
-        if (Mulligan.ModOptions.useVerboseFeed) NotificationControllerBehaviour.Show("Set <b>" + countedItems + "</b> items to " + layerName);
+        NotificationControllerBehaviour.Show("SortingLayer set for <b>" + countedItems + "</b> items to " + layerName);
 
     }
 
@@ -432,14 +488,9 @@ namespace Mulligan
                 SelectedObject.GetComponent<SpriteRenderer>().sortingOrder += delta;
 
                 countedItems++;
-
             }
 
-            if (Mulligan.ModOptions.useVerboseFeed)
-            {
-                NotificationControllerBehaviour.Show("Moved <b>" + countedItems + "</b>");
-                NotificationControllerBehaviour.Show("NOTICE: Hold ALT key too for adjusting Sorting Layer.");
-            }
+            NotificationControllerBehaviour.Show("SortingOrder set for <b>" + countedItems + "</b> items (delta: "+delta+")");
         }
 
 
@@ -468,12 +519,49 @@ namespace Mulligan
                 });
 
                 SelectedObjects.Add(selectedObject.gameObject);
-
             }
 
             MulliganBehaviour.SavedScene = ObjectStateConverter.Convert(SelectedObjects.ToArray(), new Vector3());
 
             if (Mulligan.ModOptions.useVerboseFeed) NotificationControllerBehaviour.Show("<b>Saved scene containing " + SelectedObjects.Count + "</b> items");
+
+        }
+
+
+        public void SceneSaveAsContraption(int sceneNumber = 1)
+        {
+
+            LastSceneNumber = sceneNumber;
+
+            List<LayeringOrder> SortingContraption = new List<LayeringOrder>();
+
+            var SelectedObjects    = new List<GameObject>();
+            string ContraptionName = "scene_" + sceneNumber;
+            string ContraptionFile = "Contraptions/" + ContraptionName + "/" + ContraptionName;
+
+            foreach (PhysicalBehaviour selectedObject in Global.main.PhysicalObjectsInWorld)
+            {
+
+                //  Also get the sorting layers so we can re-apply it
+                SpriteRenderer SR = selectedObject.GetComponent<SpriteRenderer>();
+
+                SortingContraption.Add(new LayeringOrder()
+                {
+                    sortingLayerName = SR.sortingLayerName,
+                    sortingOrder     = SR.sortingOrder
+                });
+
+                SelectedObjects.Add(selectedObject.gameObject);
+            }
+
+            ObjectState[] objectStates = ObjectStateConverter.Convert(SelectedObjects.ToArray(), new Vector3());
+
+            ContraptionSerialiser.SaveThumbnail(objectStates, ContraptionName);
+            ContraptionSerialiser.SaveContraption(ContraptionName, objectStates);
+
+            File.WriteAllText(ContraptionFile + "_layers.json", JsonConvert.SerializeObject(SortingContraption, Formatting.Indented));
+
+            NotificationControllerBehaviour.Show("Saved Scene: <b>"+ContraptionName+"</b>");
 
         }
 
@@ -492,10 +580,7 @@ namespace Mulligan
                 {
                     if (selectedObject.Deletable) UnityEngine.Object.Destroy(selectedObject.gameObject);
                 }
-            
             }
-
-
 
             UndoControllerBehaviour.RegisterAction(
                 (IUndoableAction)new PasteLoadAction(
@@ -506,9 +591,40 @@ namespace Mulligan
 
             ApplyLayerOrdering = 10;
 
+        }
 
+        public void SceneLoadAsContraption(int sceneNumber = 1)
+        {
 
+            string ContraptionName = "scene_" + sceneNumber;
 
+            foreach (PhysicalBehaviour selectedObject in Global.main.PhysicalObjectsInWorld)
+            {
+                if (selectedObject.Deletable) UnityEngine.Object.Destroy(selectedObject.gameObject);
+            }
+            
+            string ContraptionFile      = "Contraptions/" + ContraptionName + "/" + ContraptionName;
+
+            ContraptionMetaData myScene = new ContraptionMetaData(ContraptionName)
+            {
+                PathToMetadata  = ContraptionFile + ".json",
+                PathToDataFile  = System.IO.Path.Combine(ContraptionFile + ".jaap"),
+                PathToThumbnail = System.IO.Path.Combine(ContraptionFile + ".png")
+            };
+            
+            Contraption contraption     = ContraptionSerialiser.LoadContraption(myScene);
+
+            UndoControllerBehaviour.RegisterAction(
+                (IUndoableAction)new PasteLoadAction(
+                    (IEnumerable<UnityEngine.Object>)ObjectStateConverter.Convert(
+                        contraption.ObjectStates, new Vector3()), "Paste"));
+
+            SortingLayersList.Clear();
+            SortingLayersList = JsonConvert.DeserializeObject<List<LayeringOrder>>(File.ReadAllText(ContraptionFile + "_layers.json"));
+
+            NotificationControllerBehaviour.Show("Loaded Scene: <b>" + ContraptionName + "</b>");
+
+            ApplyLayerOrdering = 10;
 
         }
 
@@ -567,7 +683,6 @@ namespace Mulligan
 
                 }
             }
-
         }
 
 
@@ -617,9 +732,12 @@ namespace Mulligan
 
             }
 
-            if (Mulligan.ModOptions.useVerboseFeed) NotificationControllerBehaviour.Show("set to:" + delta);
+            NotificationControllerBehaviour.Show("set to background (delta: " + delta + ")");
         
        }
+
+
+        
 
     }
 
