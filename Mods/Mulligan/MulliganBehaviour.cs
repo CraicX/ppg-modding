@@ -14,13 +14,15 @@ namespace Mulligan
 
         private static ObjectState[] SavedScene;
         private static List<LayeringOrder> SortingLayersList = new List<LayeringOrder>();
-        public int ApplyLayerOrdering                       = 0;
+        public int ApplyLayerOrdering                        = 0;
         private List<Flipper> FlippingAholes                 = new List<Flipper>();
         private List<int> NoFlip                             = new List<int>();
         public static bool SlightMovement                    = false;
         public static float Intensity                        = 1f;
         public static float Speed                            = 1f;
         private static int LastSceneNumber                   = 1;
+        public static bool TriggerFlip                       = false;
+        public static List<PhysicalBehaviour> FlipList = new List<PhysicalBehaviour>();
 
 
         public struct LayeringOrder 
@@ -52,6 +54,14 @@ namespace Mulligan
                     base.transform.position = MulliganBehaviour.Intensity * Utils.GetPerlin2Mapped(num, num + 7892.387f);
                 }
 
+            }
+
+            if( TriggerFlip ) {
+                TriggerFlip = false;
+
+                FlipSelectedItems();
+
+                
             }
 
             bool winKeyPressed = (Input.GetKey(KeyCode.LeftWindows) || Input.GetKey(KeyCode.RightAlt));
@@ -116,30 +126,7 @@ namespace Mulligan
 
                 }
 
-                else if (Input.GetKeyUp(Mulligan.MotorSpeedU.keyCode))
-                {
-
-                    //
-                    //  Car speed slower
-                    //
-                    float speedAdjustment = winKeyPressed ? -100f : -25f;
-
-                    AdjustCarSpeed(speedAdjustment);
-
-                }
-
-
-                else if (Input.GetKeyUp(Mulligan.MotorSpeedD.keyCode))
-                {
-
-                    //
-                    //  Car speed faster
-                    //
-                    float speedAdjustment = winKeyPressed ? 100f : 25f;
-
-                    AdjustCarSpeed(speedAdjustment);
-
-                }
+                
                 else if (Input.GetKeyUp(Mulligan.SceneSave.keyCode))
                 {
 
@@ -308,6 +295,8 @@ namespace Mulligan
 
             NoFlip.Clear();
 
+            List<int> HashList = new List<int>();
+
             PersonBehaviour     PBO;
             Rigidbody2D         head; 
             Vector2             moveDif;
@@ -315,12 +304,36 @@ namespace Mulligan
             PhysicalBehaviour   hObj;
             Flipper             flipper;
 
+            List<PhysicalBehaviour> PhysList = new List<PhysicalBehaviour>();
+
+            PhysList.AddRange(SelectionController.Main.SelectedObjects);
+
+            if (FlipList.Count > 0) {
+                foreach(PhysicalBehaviour pb in FlipList) {
+                    PhysList.Add(pb);
+                }
+
+                FlipList.Clear();
+            }
+
+
+
+
+            //if (reselect) {
+            //   PhysList = SelectionController.Main.SelectedObjects.Select<PhysicalBehaviour, GameObject>((Func<PhysicalBehaviour, GameObject>) (c => c.gameObject)).ToArray<GameObject>();
+            //}
+
 
             //  Flip people first so we can handle hand held items and not double flip
-            foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
+            foreach (PhysicalBehaviour Selected in PhysList)
             {
 
+                int objHash = Selected.gameObject.GetHashCode();
+                if (HashList.Contains(objHash)) continue;
+                HashList.Add(objHash);
+
                 PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
+
 
                 if (PBO)
                 {
@@ -424,7 +437,7 @@ namespace Mulligan
 
             }
 
-            foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
+            foreach (PhysicalBehaviour Selected in PhysList)
             {
 
                 PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
@@ -559,7 +572,7 @@ namespace Mulligan
             ContraptionSerialiser.SaveThumbnail(objectStates, ContraptionName);
             ContraptionSerialiser.SaveContraption(ContraptionName, objectStates);
 
-            File.WriteAllText(ContraptionFile + "_layers.json", JsonConvert.SerializeObject(SortingContraption, Formatting.Indented));
+            File.WriteAllText(ContraptionFile + ".layers", JsonConvert.SerializeObject(SortingContraption, Formatting.Indented));
 
             NotificationControllerBehaviour.Show("Saved Scene: <b>"+ContraptionName+"</b>");
 
@@ -620,7 +633,7 @@ namespace Mulligan
                         contraption.ObjectStates, new Vector3()), "Paste"));
 
             SortingLayersList.Clear();
-            SortingLayersList = JsonConvert.DeserializeObject<List<LayeringOrder>>(File.ReadAllText(ContraptionFile + "_layers.json"));
+            SortingLayersList = JsonConvert.DeserializeObject<List<LayeringOrder>>(File.ReadAllText(ContraptionFile + ".layers"));
 
             NotificationControllerBehaviour.Show("Loaded Scene: <b>" + ContraptionName + "</b>");
 
