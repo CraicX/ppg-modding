@@ -10,9 +10,9 @@
     "control,flip,heal,position"
   ],
   "Scripts": [
+    "MulliganKeyMap.cs",
     "Mulligan.cs",
     "MulliganBehaviour.cs",
-    "MulliganKeyMap.cs",
     "MulliganRemap.cs"
-  ],
+  ]
 }

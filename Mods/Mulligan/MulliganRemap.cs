@@ -27,7 +27,7 @@ namespace Mulligan
                 () => { KeyMaps.ResetKeys(); }
             ));
 
-            foreach (KeyMap keyM in KeyMaps.Get()) {
+            foreach (KeyMap keyM in KeyMaps.KMaps) {
 
                 gDialog = (DialogBox)null;
 

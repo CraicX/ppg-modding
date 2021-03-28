@@ -7,15 +7,15 @@ namespace Mulligan
 {
     public static class KeyMaps
     {
-        private static readonly List<KeyMap> _KMaps   = new List<KeyMap>();
+        public static List<KeyMap> KMaps              = new List<KeyMap>();
         private static readonly string CustomKeysFile = "mulligan_keys.json";
 
 
-        private static void Reset()
+        public static void Reset()
         {
-            _KMaps.Clear();
+            KMaps.Clear();
 
-            Add("HealSelected", "Heal All Humans",                KeyCode.Keypad1);
+            Add("HealSelected", "Heal Selected Limbs",            KeyCode.Keypad1);
             Add("HealAll",      "Heal All Humans",                KeyCode.Keypad2);
             Add("FlipSelected", "Flip Selected Items",            KeyCode.Keypad4);
             Add("LayerBottom",  "Move to bottom layer",           KeyCode.Keypad7);
@@ -36,16 +36,15 @@ namespace Mulligan
             Add("PeepPain",     "Keel over in pain",              KeyCode.Keypad6, KeyCode.LeftAlt);
             Add("PeepFlailing", "Flailing",                       KeyCode.Keypad7, KeyCode.LeftAlt);
             Add("PeepSwimming", "Swimming",                       KeyCode.Keypad8, KeyCode.LeftAlt);
-            Add("RandomAction", "Debug Action",                   KeyCode.Keypad5);
         }
 
         public static void Add(KeyMap keyMap)
         {
-            foreach (KeyMap _km in _KMaps) {
-                if (_km.name == keyMap.name) _KMaps.Remove(_km);
+            foreach (KeyMap _km in KMaps) {
+                if (_km.name == keyMap.name) KMaps.Remove(_km);
             }
 
-            _KMaps.Add(keyMap);
+            KMaps.Add(keyMap);
         }
 
         public static void Add(string _name, string _title, KeyCode _keyCode, KeyCode _modifier = KeyCode.None)
@@ -62,7 +61,7 @@ namespace Mulligan
 
         public static bool Check(string _name)
         {
-            foreach (KeyMap _km in _KMaps) if (_km.name == _name) return _km.Check();
+            foreach (KeyMap _km in KMaps) if (_km.name == _name) return _km.Check();
 
             return false;
         }
@@ -75,13 +74,26 @@ namespace Mulligan
 
             List<KeyMap> TempKeys = JsonConvert.DeserializeObject<List<KeyMap>>(File.ReadAllText(CustomKeysFile));
 
-            foreach (KeyMap keyMapSet in TempKeys) Add(keyMapSet);
+            foreach (KeyMap keyMapSet in TempKeys)
+            {
+                if (keyMapSet.name != "")
+                {
+                    foreach (KeyMap _km in KMaps)
+                    {
+                        if (_km.name == keyMapSet.name)
+                        {
+                            _km.keyCode = keyMapSet.keyCode;
+                            _km.modifier = keyMapSet.modifier;
+                        }
+                    }
+                }
+            }
 
         }
 
         public static void SaveCustomKeys()
         {
-            File.WriteAllText(CustomKeysFile, JsonConvert.SerializeObject(_KMaps, Formatting.Indented));
+            File.WriteAllText(CustomKeysFile, JsonConvert.SerializeObject(KMaps, Formatting.Indented));
         }
 
         public static void ResetKeys()
@@ -91,11 +103,6 @@ namespace Mulligan
             Reset();
             
             ModAPI.Notify("Original Key Schematic is set.");
-        }
-
-        public static List<KeyMap> Get()
-        {
-            return _KMaps;
         }
 
     }
