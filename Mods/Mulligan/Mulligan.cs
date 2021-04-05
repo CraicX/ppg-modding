@@ -13,7 +13,7 @@ namespace Mulligan
 {
     public class Mulligan
     {
-        public static bool useVerbose           = true;
+        public static int verboseLevel          = 1;
         public static bool clearBeforeRestoring = true;
 
         public static void Main()

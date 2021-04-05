@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -12,9 +13,10 @@ namespace Mulligan
     {
         private static ObjectState[] SavedScene;
         private static List<LayeringOrder> SortingLayersList = new List<LayeringOrder>();
-        private List<Flipper> FlippingAholes = new List<Flipper>();
-        private List<int> NoFlip             = new List<int>();
-        private static int LastSceneNumber   = 1;
+        private List<Flipper> FlippingAholes                 = new List<Flipper>();
+        private List<int> NoFlip                             = new List<int>();
+        private static int LastSceneNumber                   = 1;
+        
         public int ApplyLayerOrdering        = 0;
         public static bool SlightMovement    = false;
         public static float Intensity        = 1f;
@@ -42,7 +44,9 @@ namespace Mulligan
         {
             if( TriggerFlip ) {
                 TriggerFlip = false;
-                FlipSelectedItems();
+                List<PhysicalBehaviour> FlipList = new List<PhysicalBehaviour>(SelectionController.Main.SelectedObjects);
+
+                FlipSelectedItems(FlipList);
             }
 
             KeyMap.ActiveModifier = KeyCode.None;
@@ -51,30 +55,36 @@ namespace Mulligan
             if (Input.GetKey(KeyCode.RightAlt)) KeyMap.ActiveModifier = KeyCode.RightAlt;
 
             //
-            //  heal peoples
+            //  Check for Hotkey, Execute associated Function
             //
-            if      (KeyMaps.Check("HealAll"))      HealPeople(true);
+                 if (KeyMaps.Check("HealAll"     )) HealPeople(true);
             else if (KeyMaps.Check("HealSelected")) HealPeople(false);
-            else if (KeyMaps.Check("FlipSelected")) FlipSelectedItems();
-            else if (KeyMaps.Check("LayerUp"))      AdjustSortingOrder(10);
-            else if (KeyMaps.Check("LayerDown"))    AdjustSortingOrder(-10);
-            else if (KeyMaps.Check("LayerBGround")) SetToBackground(true);
-            else if (KeyMaps.Check("LayerFGround")) SetToBackground(false);
-            else if (KeyMaps.Check("LayerTop"))     AdjustSortingLayer("Top");
-            else if (KeyMaps.Check("LayerBottom"))  AdjustSortingLayer("Bottom");
-            else if (KeyMaps.Check("QuickSave"))    QuickSave();
-            else if (KeyMaps.Check("QuickReset"))   QuickReset(Mulligan.clearBeforeRestoring);
-            else if (KeyMaps.Check("SaveScene"))    SaveScene();
-            else if (KeyMaps.Check("LoadScene"))    LoadScene();
-            else if (KeyMaps.Check("PeepSit"))      ChangePose((int)PoseState.Sitting);
-            else if (KeyMaps.Check("PeepWalk"))     ChangePose((int)PoseState.Walking);
-            else if (KeyMaps.Check("PeepStand"))    ChangePose((int)PoseState.Rest);
-            else if (KeyMaps.Check("PeepCower"))    ChangePose((int)PoseState.Protective);
-            else if (KeyMaps.Check("PeepStumble"))  ChangePose((int)PoseState.Stumbling);
-            else if (KeyMaps.Check("PeepPain"))     ChangePose((int)PoseState.WrithingInPain);
+            else if (KeyMaps.Check("LayerUp"     )) AdjustSortingOrder(10);
+            else if (KeyMaps.Check("LayerDown"   )) AdjustSortingOrder(-10);
+            else if (KeyMaps.Check("LayerBG"     )) LayerBG(true);
+            else if (KeyMaps.Check("LayerFG"     )) LayerBG(false);
+            else if (KeyMaps.Check("LayerTop"    )) AdjustSortingLayer("Top");
+            else if (KeyMaps.Check("LayerBottom" )) AdjustSortingLayer("Bottom");
+            else if (KeyMaps.Check("Follow"      )) FollowObject(SelectionController.Main.SelectedObjects);
+            else if (KeyMaps.Check("QuickSave"   )) QuickSave();
+            else if (KeyMaps.Check("QuickReset"  )) QuickReset(Mulligan.clearBeforeRestoring);
+            else if (KeyMaps.Check("SaveScene"   )) SaveScene();
+            else if (KeyMaps.Check("LoadScene"   )) LoadScene();
+            else if (KeyMaps.Check("GrabItem"    )) GrabClosestItem();
+            else if (KeyMaps.Check("PeepSit"     )) ChangePose((int)PoseState.Sitting);
+            else if (KeyMaps.Check("PeepWalk"    )) ChangePose((int)PoseState.Walking);
+            else if (KeyMaps.Check("PeepStand"   )) ChangePose((int)PoseState.Rest);
+            else if (KeyMaps.Check("PeepCower"   )) ChangePose((int)PoseState.Protective);
+            else if (KeyMaps.Check("PeepStumble" )) ChangePose((int)PoseState.Stumbling);
+            else if (KeyMaps.Check("PeepPain"    )) ChangePose((int)PoseState.WrithingInPain);
             else if (KeyMaps.Check("PeepFlailing")) ChangePose((int)PoseState.Flailing);
             else if (KeyMaps.Check("PeepSwimming")) ChangePose((int)PoseState.Swimming);
-            
+            else if (KeyMaps.Check("FlipSelected"))
+            {
+                List<PhysicalBehaviour> FlipList = new List<PhysicalBehaviour>(SelectionController.Main.SelectedObjects);
+                FlipSelectedItems(FlipList);
+            }
+
             if (ApplyLayerOrdering > 0)
             {
                 --ApplyLayerOrdering;
@@ -82,6 +92,163 @@ namespace Mulligan
             }
         }
 
+
+        // - - - - - - - - - - - - - - - - - - -
+        //
+        //  FN: GRAB CLOSEST ITEM
+        //
+        public void GrabClosestItem()
+        {
+            PersonBehaviour PBO; 
+            Rigidbody2D     LowerArm;
+            List<int>       PeepsWithItems  = new List<int>();
+            int             peepsEquipped   = 0;
+            int             peepsDropped    = 0;
+            int             verbose         = Mulligan.verboseLevel;
+
+            Mulligan.verboseLevel = 0;
+            //  Look for peeps and find their front arm
+            foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
+            {
+                PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
+                if (!PBO) continue;
+
+                LowerArm = PBO.transform.GetChild(9).transform.GetChild(1).GetComponent<Rigidbody2D>();
+                if (!LowerArm) continue;
+
+                if (PeepsWithItems.Contains(LowerArm.GetInstanceID())) continue;
+                PeepsWithItems.Add(LowerArm.GetInstanceID());
+
+                Collider2D[] noCollide;
+
+                GripBehaviour GB = LowerArm.GetComponent<GripBehaviour>();
+
+                if (GB.isHolding)
+                {
+                    //  We is already holding, so drop it
+                    FixedJoint2D Itemjoint;
+                    GB.isHolding = false;
+                    GB.CurrentlyHolding.IsWeightless = false;
+                    GB.CurrentlyHolding.MakeWeightful();
+
+                    //  Need to loop through these incase PickUpNearestObject() was also triggered
+                    //  and created its own joint
+                    while (Itemjoint = GB.gameObject.GetComponent<FixedJoint2D>())
+                    {
+                        UnityEngine.Object.DestroyImmediate(Itemjoint);
+                    }
+
+                    GB.CurrentlyHolding.beingHeldByGripper = false;
+                    GB.CurrentlyHolding = (PhysicalBehaviour)null;
+
+                    ++peepsDropped;
+
+                    continue;
+                }
+
+                Vector2 worldPoint        = (Vector2)GB.transform.TransformPoint(GB.GripPosition);
+                Vector2 NearestHoldingPos = new Vector2(0.0f, 0.0f);
+                FixedJoint2D joint;
+
+                PhysicalBehaviour phys = (PhysicalBehaviour)null;
+
+                float num2 = float.MaxValue;
+
+                //  loop thru objects and determine which is closest to peep
+                foreach (PhysicalBehaviour physicalBehaviour in Global.main.PhysicalObjectsInWorld)
+                {
+                    // skip items arealy being held
+                    if (physicalBehaviour.beingHeldByGripper) continue;
+
+                    Vector2 localHoldingPoint = physicalBehaviour.GetNearestLocalHoldingPoint(worldPoint, out float distance);
+                    if ((double)distance < (double)num2)
+                    {
+                        num2              = distance;
+                        NearestHoldingPos = localHoldingPoint;
+                        phys              = physicalBehaviour;
+                    }
+                }
+                if (!(bool)(UnityEngine.Object)phys) return;
+
+                bool PersonFlipped = PBO.transform.localScale.x  < 0.0f;
+                bool ItemFlipped   = phys.transform.localScale.x < 0.0f;
+                if (PersonFlipped != ItemFlipped)
+                {
+                    List<PhysicalBehaviour> FlipList = new List<PhysicalBehaviour>
+                    {
+                        phys
+                    };
+
+                    FlipSelectedItems(FlipList);
+                }
+
+                phys.IsWeightless = true;
+                phys.MakeWeightless();
+
+                GB.isHolding        = true;
+                GB.CurrentlyHolding = phys;
+
+                float ArmRotation       = LowerArm.rotation;
+                phys.transform.rotation = Quaternion.Euler(0.0f, 0.0f, PersonFlipped ? ArmRotation + 95.0f : ArmRotation - 95.0f);
+
+                //  Adjust layers of the hand and the held object so object is over body but under hand
+                //  But try not to goof the layers if someone already assigned values
+                int SOrder = LowerArm.GetComponent<SpriteRenderer>().sortingOrder;
+                if (SOrder < 10)
+                {
+                    SOrder = 10;
+                    LowerArm.GetComponent<SpriteRenderer>().sortingOrder = SOrder;
+                }
+                phys.GetComponent<SpriteRenderer>().sortingLayerName = LowerArm.GetComponent<SpriteRenderer>().sortingLayerName;
+                phys.GetComponent<SpriteRenderer>().sortingOrder     = SOrder - 1;
+
+                //  @TODO:
+                //  When multiple GripPositions exist, there should be a way so this remembers the preferred GripPosition by the user
+                //  Then next auto-equip will automatically choose preferred position
+                phys.beingHeldByGripper = true;
+                phys.transform.position += GB.transform.TransformPoint(GB.GripPosition) - phys.transform.TransformPoint((Vector3)NearestHoldingPos);
+
+                //  Attaches object(phys) to the hand (GB : GripBehaviour)
+                joint                 = GB.gameObject.AddComponent<FixedJoint2D>();
+                joint.connectedBody   = phys.rigidbody;
+                joint.anchor          = (Vector2)GB.GripPosition;
+                joint.connectedAnchor = NearestHoldingPos;
+                joint.enableCollision = false;
+
+                //  Disables collisions between the object and person holding it.
+                //  But do they remain disabled when the object switches owners?
+                noCollide = GB.transform.root.GetComponentsInChildren<Collider2D>();
+                foreach (Collider2D componentsInChild in phys.transform.root.GetComponentsInChildren<Collider2D>())
+                {
+                    foreach (Collider2D collider2 in noCollide)
+                    {
+                        if ((bool)(UnityEngine.Object)collider2 && (bool)(UnityEngine.Object)componentsInChild)
+                            Physics2D.IgnoreCollision(componentsInChild, collider2);
+                    }
+                }
+
+                ++peepsEquipped;
+
+            }
+
+            Mulligan.verboseLevel = verbose;
+
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("<color=green>Equipped: " + peepsEquipped + "</color>  <color=red>Dropped: " + peepsDropped);
+
+        }
+
+        
+
+        public void FollowObject( ReadOnlyCollection<PhysicalBehaviour> SelectedObjList )
+        {
+            FollowObject(SelectedObjList[0]);
+        }
+
+        public void FollowObject( PhysicalBehaviour SelectedObj )
+        {
+            Global.main.CameraControlBehaviour.CurrentlyFollowing.Add(SelectedObj);
+            if (Mulligan.verboseLevel >= 2) ModAPI.Notify("Following: " + SelectedObj.name);
+        }
 
         // - - - - - - - - - - - - - - - - - - -
         //
@@ -117,7 +284,7 @@ namespace Mulligan
                 }
             }
             
-            if (Mulligan.useVerbose) ModAPI.Notify("# Healed: " + healedCount);
+            if (Mulligan.verboseLevel >= 2) ModAPI.Notify("# Healed: " + healedCount);
         }
 
 
@@ -128,7 +295,7 @@ namespace Mulligan
         //  Following code was based off of what was in the "ActiveHumans" mod.
         //  Very cool to have such a neat glimpse at what is possible
         //
-        public void FlipSelectedItems()
+        public void FlipSelectedItems(List<PhysicalBehaviour> ItemsToFlip)
         {
             FlippingAholes.Clear();
 
@@ -137,22 +304,21 @@ namespace Mulligan
 
             NoFlip.Clear();
 
-            PersonBehaviour     PBO;
-            Rigidbody2D         head; 
-            Vector2             moveDif;
-            Vector2             pos;
-            PhysicalBehaviour   hObj;
-            Flipper             flipper;
+            PersonBehaviour   PBO;
+            Rigidbody2D       head;
+            Vector2           moveDif;
+            PhysicalBehaviour hObj;
+            Flipper           flipper;
 
             //  Flip people first so we can handle hand held items and not double flip
-            foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
+            foreach (PhysicalBehaviour Selected in ItemsToFlip)
             {
                 PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
 
                 if (PBO)
                 {
                     bool canFlip = true;
-                    int instID   = PBO.GetInstanceID();
+                    int instID = PBO.GetInstanceID();
 
                     foreach (Flipper flipperTmp in FlippingAholes)
                         if (flipperTmp.instanceID == instID) canFlip = false;
@@ -171,21 +337,21 @@ namespace Mulligan
                         flipper.flipScale.x *= -1;
 
                         FlippingAholes.Add(flipper);
+                        FixedJoint2D Itemjoint;
 
                         foreach (LimbBehaviour limb in flipper.PB.Limbs)
                         {
                             if (limb == flipper.PB.Limbs[1]) flipper.moveB = limb.transform.position;
-                            
+
                             if (limb.HasJoint)
                             {
-
                                 limb.BreakingThreshold *= 8;
 
-                                if (   limb.name != "LowerBody" 
-                                    && limb.name != "MiddleBody" 
-                                    && limb.name != "UpperBody" 
-                                    && limb.name != "UpperArm" 
-                                    && limb.name != "UpperArmFront" 
+                                if (limb.name != "LowerBody"
+                                    && limb.name != "MiddleBody"
+                                    && limb.name != "UpperBody"
+                                    && limb.name != "UpperArm"
+                                    && limb.name != "UpperArmFront"
                                     && limb.name != "Head")
                                 {
                                     JointAngleLimits2D t = limb.Joint.limits;
@@ -216,18 +382,46 @@ namespace Mulligan
                             flipper.PB.transform.position = new Vector2(flipper.PB.transform.position.x + moveDif.x, flipper.PB.transform.position.y);
 
                             foreach (LimbBehaviour limb in flipper.PB.Limbs) if (limb.HasJoint) limb.Broken = false;
-
+                            
                             GripBehaviour[] grips = flipper.PB.GetComponentsInChildren<GripBehaviour>();
-
+                            
                             foreach (GripBehaviour grip in grips)
                             {
-                                if (grip.isHolding) 
+                                if (grip.isHolding)
                                 {
                                     hObj = grip.CurrentlyHolding;
+
+                                    // Break joint
+                                    while (Itemjoint = grip.gameObject.GetComponent<FixedJoint2D>())
+                                    {
+                                        UnityEngine.Object.DestroyImmediate(Itemjoint);
+                                    }
+                                    
+                                    //  Flip Item
+                                    Vector3 theScale = hObj.transform.localScale;
+                                    theScale.x *= -1.0f;
+                                    hObj.transform.localScale = theScale;
+
+                                    //  Set new item rotation
+                                    hObj.transform.rotation = Quaternion.Euler(
+                                        0.0f, 0.0f,
+                                        grip.GetComponentInParent<Rigidbody2D>().rotation + 95.0f * (flipper.PB.transform.localScale.x < 0.0f ? 1.0f : -1.0f));
+
+                                    //  Move item to flipped position
+                                    Vector2 GripPoint = hObj.GetNearestLocalHoldingPoint(grip.transform.TransformPoint(grip.GripPosition), out float distance);
+                                    hObj.transform.position += grip.transform.TransformPoint(grip.GripPosition) - 
+                                        hObj.transform.TransformPoint(GripPoint);
+                                    
+                                    //  Create new joint
+                                    FixedJoint2D joint;
+                                    joint                 = grip.gameObject.AddComponent<FixedJoint2D>();
+                                    joint.connectedBody   = hObj.rigidbody;
+                                    joint.anchor          = (Vector2)grip.GripPosition;
+                                    joint.connectedAnchor = GripPoint;
+                                    joint.enableCollision = false;
+
                                     NoFlip.Add(hObj.GetHashCode());
-                                    pos  = grip.transform.TransformPoint(grip.GripPosition);
-                                    hObj.transform.position   = pos;
-                                    hObj.transform.localScale = new Vector2(hObj.transform.localScale.x * 1f, hObj.transform.localScale.y * -1f);
+
                                 }
                             }
 
@@ -237,7 +431,7 @@ namespace Mulligan
                 }
             }
 
-            foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
+            foreach (PhysicalBehaviour Selected in ItemsToFlip)
             {
                 PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
 
@@ -253,7 +447,7 @@ namespace Mulligan
                 }
             }
 
-           if (Mulligan.useVerbose) ModAPI.Notify("Items flipped: " + countedItems + "   Humans flipped: " + countedHumans);
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("Items flipped: " + countedItems + "   Humans flipped: " + countedHumans);
         }
 
         // - - - - - - - - - - - - - - - - - - -
@@ -323,7 +517,7 @@ namespace Mulligan
                 countedItems++;
             }
 
-            ModAPI.Notify("SortingLayer set for <b>" + countedItems + "</b> items to " + layerName);
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("SortingLayer set for <b>" + countedItems + "</b> items to " + layerName);
         }
 
 
@@ -341,14 +535,34 @@ namespace Mulligan
                 countedItems++;
             }
 
-            ModAPI.Notify("SortingOrder set for <b>" + countedItems + "</b> items (delta: "+delta+")");
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("SortingOrder set for <b>" + countedItems + "</b> items (delta: "+delta+")");
+        }
+
+        // - - - - - - - - - - - - - - - - - - -
+        //
+        //  FN: SET TO BACKGROUND
+        //
+        public void LayerBG(bool isBackground)
+        {
+
+            string msg = "background";
+            if (!isBackground) msg = "foreground";
+
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("Set Items to " + msg);
+
+            foreach (PhysicalBehaviour SelectedObject in SelectionController.Main.SelectedObjects)
+            {
+                SelectedObject.gameObject.SetLayer(isBackground ? 2 : 9);
+            }
+
+
         }
 
 
 
         // - - - - - - - - - - - - - - - - - - -
         //
-        //  FN: SCENE SAVE
+        //  FN: QUICK SAVE
         //
         public void QuickSave()
         {
@@ -372,7 +586,7 @@ namespace Mulligan
 
             MulliganBehaviour.SavedScene = ObjectStateConverter.Convert(SelectedObjects.ToArray(), new Vector3());
 
-            ModAPI.Notify("<b>Saved scene containing " + SelectedObjects.Count + "</b> items");
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("<b>Saved scene containing " + SelectedObjects.Count + "</b> items");
         }
 
 
@@ -407,7 +621,7 @@ namespace Mulligan
 
             File.WriteAllText(ContraptionFile + ".layers", JsonConvert.SerializeObject(SortingContraption, Formatting.Indented));
 
-            ModAPI.Notify("Saved Scene: <b>"+ContraptionName+"</b>");
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("Saved Scene: <b>"+ContraptionName+"</b>");
         }
 
 
@@ -432,7 +646,7 @@ namespace Mulligan
                     (IEnumerable<UnityEngine.Object>)ObjectStateConverter.Convert(MulliganBehaviour.SavedScene,
                     new Vector3()), "Paste"));
 
-            ModAPI.Notify("Restored Scene");
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("Restored Scene");
 
             ApplyLayerOrdering = 10;
         }
@@ -465,7 +679,7 @@ namespace Mulligan
             SortingLayersList.Clear();
             SortingLayersList = JsonConvert.DeserializeObject<List<LayeringOrder>>(File.ReadAllText(ContraptionFile + ".layers"));
 
-            ModAPI.Notify("Loaded Scene: <b>" + ContraptionName + "</b>");
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("Loaded Scene: <b>" + ContraptionName + "</b>");
 
             ApplyLayerOrdering = 10;
         }
@@ -488,8 +702,8 @@ namespace Mulligan
 
                 verboseMsg += "[" + carGuy.name + ": " + carGuy.MotorSpeed + "]  ";
             }
-                
-           if (Mulligan.useVerbose) ModAPI.Notify(verboseMsg);
+
+            if (Mulligan.verboseLevel >= 1) ModAPI.Notify(verboseMsg);
         }
 
         // - - - - - - - - - - - - - - - - - - -
@@ -498,10 +712,11 @@ namespace Mulligan
         //
         public void ChangePose(int poseNum) {
 
-            //  All selected people sit down
-            //
+            int peepsCount = 0;
             List<PersonBehaviour> PeopleAlreadyPosed = new List<PersonBehaviour>();
 
+            //  Loop thru all peeps within a selection and change their PoseIndex
+            //
             foreach (PhysicalBehaviour SelectedObject in SelectionController.Main.SelectedObjects)
             {
                 PersonBehaviour person = SelectedObject.gameObject.GetComponentInParent<PersonBehaviour>();
@@ -510,12 +725,21 @@ namespace Mulligan
                 {
                     if (PeopleAlreadyPosed.Contains(person)) continue;
 
+                    ++peepsCount;
+
                     PeopleAlreadyPosed.Add(person);
 
+                    //  If the person was already doing that pose, then have them stand still instead
                     if (person.OverridePoseIndex == poseNum) person.OverridePoseIndex = -1;
                     else person.OverridePoseIndex = poseNum;
 
                 }
+            }
+
+            if (Mulligan.verboseLevel >= 2)
+            {
+                PoseState myPose = (PoseState)poseNum;
+                ModAPI.Notify("[<color=red>" + myPose.ToString() + "</color>] toggled for " + peepsCount);
             }
         }
 
@@ -546,23 +770,7 @@ namespace Mulligan
         }
 
 
-        // - - - - - - - - - - - - - - - - - - -
-        //
-        //  FN: SET TO BACKGROUND
-        //
-        public void SetToBackground(bool doBackground)
-        {
-            int countedItems = 0;
-            int layerNumber  = doBackground ? 2 : 9;
-
-            foreach (PhysicalBehaviour SelectedObject in SelectionController.Main.SelectedObjects)
-            {
-                SelectedObject.gameObject.SetLayer(layerNumber);
-                countedItems++;
-            }
-
-            ModAPI.Notify("set to " + (doBackground ? "background" : "foreground") );
-       }
+        
     }
 }
 

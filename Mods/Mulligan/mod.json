@@ -1,8 +1,8 @@
 {
   "Name": "Mulligan",
   "Author": "JohnnyTaco",
-  "Description": "Utility mod for controlling, flipping, tweaking, resetting items",
-  "ModVersion": "1.21",
+  "Description": "Utility mod for controlling, flipping, tweaking, arming, resetting items",
+  "ModVersion": "1.26",
   "GameVersion": "1.11+",
   "ThumbnailPath": "thumb.png",
   "EntryPoint": "Mulligan.Mulligan",
@@ -14,5 +14,8 @@
     "Mulligan.cs",
     "MulliganBehaviour.cs",
     "MulliganRemap.cs"
-  ]
+  ],
+  "Active": true,
+  "UGCIdentity": null,
+  "CreatorUGCIdentity": "2369099463"
 }

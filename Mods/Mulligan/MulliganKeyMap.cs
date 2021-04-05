@@ -10,24 +10,25 @@ namespace Mulligan
         public static List<KeyMap> KMaps              = new List<KeyMap>();
         private static readonly string CustomKeysFile = "mulligan_keys.json";
 
-
         public static void Reset()
         {
             KMaps.Clear();
 
             Add("HealSelected", "Heal Selected Limbs",            KeyCode.Keypad1);
             Add("HealAll",      "Heal All Humans",                KeyCode.Keypad2);
+            Add("Follow",       "Follow Object",                  KeyCode.Keypad3);
             Add("FlipSelected", "Flip Selected Items",            KeyCode.Keypad4);
+            Add("GrabItem",     "Grab closest Item",              KeyCode.Keypad5);
             Add("LayerBottom",  "Move to bottom layer",           KeyCode.Keypad7);
             Add("LayerTop",     "Move to top layer",              KeyCode.Keypad7, KeyCode.RightAlt);
             Add("LayerUp",      "Move Selected Up 1 Layer",       KeyCode.Keypad8);
             Add("LayerDown",    "Move Selected Down 1 Layer",     KeyCode.Keypad8, KeyCode.RightAlt);
-            Add("LayerFground", "Move Selected out bground",      KeyCode.Keypad9);
-            Add("LayerBground", "Move Selected to bground",       KeyCode.Keypad9, KeyCode.RightAlt);
+            Add("LayerFG",      "Move Selected out of bground",   KeyCode.Keypad9);
+            Add("LayerBG",      "Move Selected to bground",       KeyCode.Keypad9, KeyCode.RightAlt);
             Add("QuickSave",    "Save entire scene to memory",    KeyCode.Keypad0);
             Add("QuickReset",   "Reset the scene",                KeyCode.KeypadMultiply);
             Add("SaveScene",    "Save scene to disk",             KeyCode.Keypad0, KeyCode.RightAlt);
-            Add("LoadScene",   "Load scene from disk",            KeyCode.KeypadMultiply, KeyCode.RightAlt);
+            Add("LoadScene",    "Load scene from disk",           KeyCode.KeypadMultiply, KeyCode.RightAlt);
             Add("PeepWalk",     "Walk selected humans",           KeyCode.Keypad1, KeyCode.LeftAlt);
             Add("PeepStand",    "Selected humans Stand up",       KeyCode.Keypad2, KeyCode.LeftAlt);
             Add("PeepSit",      "Selected humans Sit Down",       KeyCode.Keypad3, KeyCode.LeftAlt);
@@ -36,6 +37,7 @@ namespace Mulligan
             Add("PeepPain",     "Keel over in pain",              KeyCode.Keypad6, KeyCode.LeftAlt);
             Add("PeepFlailing", "Flailing",                       KeyCode.Keypad7, KeyCode.LeftAlt);
             Add("PeepSwimming", "Swimming",                       KeyCode.Keypad8, KeyCode.LeftAlt);
+            Add("PeepBerserk",  "Berserk",                        KeyCode.Keypad9, KeyCode.LeftAlt);
         }
 
         public static void Add(KeyMap keyMap)
@@ -82,7 +84,7 @@ namespace Mulligan
                     {
                         if (_km.name == keyMapSet.name)
                         {
-                            _km.keyCode = keyMapSet.keyCode;
+                            _km.keyCode  = keyMapSet.keyCode;
                             _km.modifier = keyMapSet.modifier;
                         }
                     }
@@ -109,9 +111,9 @@ namespace Mulligan
 
     public class KeyMap
     {
-        public static KeyCode ActiveModifier;
-        public string name;
-        public string title;
+        public static  KeyCode ActiveModifier;
+        public string  name;
+        public string  title;
         public KeyCode keyCode;
         public KeyCode modifier;
 

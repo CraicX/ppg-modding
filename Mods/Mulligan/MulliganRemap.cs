@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -21,11 +22,22 @@ namespace Mulligan
             int i = 0;
 
             buttons.Add(new ContextMenuButton(
+                "MulliganKM" + ++i,
+                "<color=red><size=10>Set Mulligan Notification Level</size></color>",
+                "Enable or Disable Messages",
+                () => { SetVerbose(); }
+            ));
+
+            buttons.Add(new ContextMenuButton(
                 "MulliganKM" + ++i, 
                 "<color=red><size=10>_REMAP: RESET ALL KEYS</size></color>", 
                 "For remapping the keys", 
                 () => { KeyMaps.ResetKeys(); }
             ));
+            
+            
+
+
 
             foreach (KeyMap keyM in KeyMaps.KMaps) {
 
@@ -73,6 +85,27 @@ namespace Mulligan
             KeyMaps.SaveCustomKeys();
 
             ModAPI.Notify("Custom Keys Saved");
+        }
+
+        private void SetVerbose()
+        {
+            DialogBox dialog = null;
+            dialog = DialogBoxManager.TextEntry(
+                "Set notification level [0=off] (0-2)",
+                Mulligan.verboseLevel.ToString(),
+                new DialogButton("OK", true, new UnityAction[1] { (UnityAction)(() => SetVerboseLevel(dialog)) }),
+                new DialogButton("Cancel", true, (UnityAction[])Array.Empty<UnityAction>()));
+
+
+            void SetVerboseLevel(DialogBox d)
+            {
+                string intext = d.EnteredText;
+
+                if (int.TryParse(intext, out int verbose)
+                    && (verbose >= 0 || verbose <= 9)) Mulligan.verboseLevel = verbose;
+
+                else ModAPI.Notify("Invalid Verbose Setting! Try (0-3)");
+            }
         }
 
         public void Update() 
