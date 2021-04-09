@@ -5,6 +5,7 @@ using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
+using static Mulligan.MulliganBehaviour;
 
 namespace Mulligan
 {
@@ -12,12 +13,12 @@ namespace Mulligan
     public class MulliganBehaviour : MonoBehaviour
     {
         private static ObjectState[] SavedScene;
-        private static List<LayeringOrder> SortingLayersList = new List<LayeringOrder>();
-        private List<Flipper> FlippingAholes                 = new List<Flipper>();
-        private List<int> NoFlip                             = new List<int>();
-        private static int LastSceneNumber                   = 1;
+        private static List<LayeringOrder> SortingLayersList        = new List<LayeringOrder>();
+        private static List<Flipper> FlippingAholes                 = new List<Flipper>();
+        private static List<int> NoFlip                             = new List<int>();
+        private static int LastSceneNumber                          = 1;
         
-        public int ApplyLayerOrdering        = 0;
+        public static int ApplyLayerOrdering = 0;
         public static bool SlightMovement    = false;
         public static float Intensity        = 1f;
         public static float Speed            = 1f;
@@ -38,6 +39,9 @@ namespace Mulligan
             public Vector2 moveB;
             public Vector3 flipScale;
             public int status;
+
+            public override int GetHashCode() => base.GetHashCode();
+            public override bool Equals(object obj) => (int)obj == instanceID;
         }
 
         public void Update()
@@ -49,37 +53,32 @@ namespace Mulligan
                 FlipSelectedItems(FlipList);
             }
 
-            KeyMap.ActiveModifier = KeyCode.None;
-
-            if (Input.GetKey(KeyCode.LeftAlt)) KeyMap.ActiveModifier  = KeyCode.LeftAlt;
-            if (Input.GetKey(KeyCode.RightAlt)) KeyMap.ActiveModifier = KeyCode.RightAlt;
-
             //
             //  Check for Hotkey, Execute associated Function
             //
-                 if (KeyMaps.Check("HealAll"     )) HealPeople(true);
-            else if (KeyMaps.Check("HealSelected")) HealPeople(false);
-            else if (KeyMaps.Check("LayerUp"     )) AdjustSortingOrder(10);
-            else if (KeyMaps.Check("LayerDown"   )) AdjustSortingOrder(-10);
-            else if (KeyMaps.Check("LayerBG"     )) LayerBG(true);
-            else if (KeyMaps.Check("LayerFG"     )) LayerBG(false);
-            else if (KeyMaps.Check("LayerTop"    )) AdjustSortingLayer("Top");
-            else if (KeyMaps.Check("LayerBottom" )) AdjustSortingLayer("Bottom");
-            else if (KeyMaps.Check("Follow"      )) FollowObject(SelectionController.Main.SelectedObjects);
-            else if (KeyMaps.Check("QuickSave"   )) QuickSave();
-            else if (KeyMaps.Check("QuickReset"  )) QuickReset(Mulligan.clearBeforeRestoring);
-            else if (KeyMaps.Check("SaveScene"   )) SaveScene();
-            else if (KeyMaps.Check("LoadScene"   )) LoadScene();
-            else if (KeyMaps.Check("GrabItem"    )) GrabClosestItem();
-            else if (KeyMaps.Check("PeepSit"     )) ChangePose((int)PoseState.Sitting);
-            else if (KeyMaps.Check("PeepWalk"    )) ChangePose((int)PoseState.Walking);
-            else if (KeyMaps.Check("PeepStand"   )) ChangePose((int)PoseState.Rest);
-            else if (KeyMaps.Check("PeepCower"   )) ChangePose((int)PoseState.Protective);
-            else if (KeyMaps.Check("PeepStumble" )) ChangePose((int)PoseState.Stumbling);
-            else if (KeyMaps.Check("PeepPain"    )) ChangePose((int)PoseState.WrithingInPain);
-            else if (KeyMaps.Check("PeepFlailing")) ChangePose((int)PoseState.Flailing);
-            else if (KeyMaps.Check("PeepSwimming")) ChangePose((int)PoseState.Swimming);
-            else if (KeyMaps.Check("FlipSelected"))
+                 if (Mulligan.KeyCheck("HealAll"     )) HealPeople(true);
+            else if (Mulligan.KeyCheck("HealSelected")) HealPeople(false);
+            else if (Mulligan.KeyCheck("LayerUp"     )) AdjustSortingOrder(10);
+            else if (Mulligan.KeyCheck("LayerDown"   )) AdjustSortingOrder(-10);
+            else if (Mulligan.KeyCheck("LayerBG"     )) LayerBG(true);
+            else if (Mulligan.KeyCheck("LayerFG"     )) LayerBG(false);
+            else if (Mulligan.KeyCheck("LayerTop"    )) AdjustSortingLayer("Top");
+            else if (Mulligan.KeyCheck("LayerBottom" )) AdjustSortingLayer("Bottom");
+            else if (Mulligan.KeyCheck("Follow"      )) FollowObject(SelectionController.Main.SelectedObjects);
+            else if (Mulligan.KeyCheck("QuickSave"   )) QuickSave();
+            else if (Mulligan.KeyCheck("QuickReset"  )) QuickReset(Mulligan.clearBeforeRestoring);
+            else if (Mulligan.KeyCheck("SaveScene"   )) SaveScene();
+            else if (Mulligan.KeyCheck("LoadScene"   )) LoadScene();
+            else if (Mulligan.KeyCheck("GrabItem"    )) GrabClosestItem();
+            else if (Mulligan.KeyCheck("PeepSit"     )) ChangePose((int)PoseState.Sitting);
+            else if (Mulligan.KeyCheck("PeepWalk"    )) ChangePose((int)PoseState.Walking);
+            else if (Mulligan.KeyCheck("PeepStand"   )) ChangePose((int)PoseState.Rest);
+            else if (Mulligan.KeyCheck("PeepCower"   )) ChangePose((int)PoseState.Protective);
+            else if (Mulligan.KeyCheck("PeepStumble" )) ChangePose((int)PoseState.Stumbling);
+            else if (Mulligan.KeyCheck("PeepPain"    )) ChangePose((int)PoseState.WrithingInPain);
+            else if (Mulligan.KeyCheck("PeepFlailing")) ChangePose((int)PoseState.Flailing);
+            else if (Mulligan.KeyCheck("PeepSwimming")) ChangePose((int)PoseState.Swimming);
+            else if (Mulligan.KeyCheck("FlipSelected"))
             {
                 List<PhysicalBehaviour> FlipList = new List<PhysicalBehaviour>(SelectionController.Main.SelectedObjects);
                 FlipSelectedItems(FlipList);
@@ -92,9 +91,7 @@ namespace Mulligan
             }
         }
 
-
         // - - - - - - - - - - - - - - - - - - -
-        //
         //  FN: GRAB CLOSEST ITEM
         //
         public void GrabClosestItem()
@@ -107,6 +104,7 @@ namespace Mulligan
             int             verbose         = Mulligan.verboseLevel;
 
             Mulligan.verboseLevel = 0;
+
             //  Look for peeps and find their front arm
             foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
             {
@@ -237,8 +235,6 @@ namespace Mulligan
 
         }
 
-        
-
         public void FollowObject( ReadOnlyCollection<PhysicalBehaviour> SelectedObjList )
         {
             FollowObject(SelectedObjList[0]);
@@ -301,153 +297,247 @@ namespace Mulligan
 
             int countedItems  = 0;
             int countedHumans = 0;
+            int countedCars   = 0;
 
             NoFlip.Clear();
 
-            PersonBehaviour   PBO;
+            PersonBehaviour           PBO;
+            RandomCarTextureBehaviour CAR;
+
+            //  First flip people and cars since they may have attached objects
+            foreach (PhysicalBehaviour Selected in ItemsToFlip)
+            {
+                int ObjectID = Selected.GetHashCode();
+
+                if (PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>())
+                {
+                    NoFlip.Add(ObjectID);
+                    if (FlipPeep(PBO)) countedHumans++;
+                } 
+                
+                else if (CAR = Selected.gameObject.GetComponentInParent<RandomCarTextureBehaviour>())
+                {
+                    NoFlip.Add(ObjectID);
+                    if (FlipCar(CAR)) countedCars++;
+                }
+            }
+
+            foreach (PhysicalBehaviour Selected in ItemsToFlip)
+            {
+                if (NoFlip.Contains(Selected.GetHashCode())) continue;
+
+                countedItems++;
+
+                Vector3 theScale = Selected.transform.localScale;
+                theScale.x *= -1;
+                Selected.transform.localScale = theScale;
+            }
+
+            if (Mulligan.verboseLevel >= 2) ModAPI.Notify(
+                "<color=blue><-></color> <color=red>Items: "  + countedItems   + "</color> "
+                + "<color=green>Cars: "   + countedCars    + "</color> "
+                + "<color=yellow>Peeps: " + countedHumans  + "</color> ");
+        }
+
+
+        public bool FlipPeep(PersonBehaviour PBO)
+        {
+            Flipper flipper;
+
+            int instID = PBO.GetInstanceID();
+
+            foreach (Flipper flipperTmp in FlippingAholes)
+            {
+                if (flipperTmp.instanceID == instID) return false;
+            }
+
             Rigidbody2D       head;
             Vector2           moveDif;
             PhysicalBehaviour hObj;
-            Flipper           flipper;
+            FixedJoint2D      Itemjoint;
 
-            //  Flip people first so we can handle hand held items and not double flip
-            foreach (PhysicalBehaviour Selected in ItemsToFlip)
+            flipper = new Flipper()
             {
-                PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
+                PB         = PBO,
+                flipScale  = PBO.transform.localScale,
+                instanceID = PBO.GetInstanceID(),
+                status     = 1
+            };
 
-                if (PBO)
+            flipper.flipScale.x *= -1;
+            FlippingAholes.Add(flipper);
+
+            foreach (LimbBehaviour limb in flipper.PB.Limbs)
+            {
+                if (limb == flipper.PB.Limbs[1]) flipper.moveB = limb.transform.position;
+                if (limb.HasJoint)
                 {
-                    bool canFlip = true;
-                    int instID = PBO.GetInstanceID();
+                    limb.BreakingThreshold *= 8;
 
-                    foreach (Flipper flipperTmp in FlippingAholes)
-                        if (flipperTmp.instanceID == instID) canFlip = false;
-
-                    if (canFlip)
+                    if (limb.name    != "LowerBody"
+                        && limb.name != "MiddleBody"
+                        && limb.name != "UpperBody"
+                        && limb.name != "UpperArm"
+                        && limb.name != "UpperArmFront"
+                        && limb.name != "Head")
                     {
-                        flipper = new Flipper()
-                        {
-
-                            PB         = PBO,
-                            flipScale  = PBO.transform.localScale,
-                            instanceID = PBO.GetInstanceID(),
-                            status     = 1
-                        };
-
-                        flipper.flipScale.x *= -1;
-
-                        FlippingAholes.Add(flipper);
-                        FixedJoint2D Itemjoint;
-
-                        foreach (LimbBehaviour limb in flipper.PB.Limbs)
-                        {
-                            if (limb == flipper.PB.Limbs[1]) flipper.moveB = limb.transform.position;
-
-                            if (limb.HasJoint)
-                            {
-                                limb.BreakingThreshold *= 8;
-
-                                if (limb.name != "LowerBody"
-                                    && limb.name != "MiddleBody"
-                                    && limb.name != "UpperBody"
-                                    && limb.name != "UpperArm"
-                                    && limb.name != "UpperArmFront"
-                                    && limb.name != "Head")
-                                {
-                                    JointAngleLimits2D t = limb.Joint.limits;
-                                    t.min *= -1f;
-                                    t.max *= -1f;
-                                    limb.Joint.limits = t;
-                                    limb.OriginalJointLimits = new Vector2(limb.OriginalJointLimits.x * -1f, limb.OriginalJointLimits.y * -1f);
-                                }
-                            }
-                        }
-
-                        Transform headT = flipper.PB.gameObject.transform.GetChild(5);
-
-                        if (headT)
-                        {
-                            head = headT.GetComponent<Rigidbody2D>();
-
-                            flipper.PB.transform.localScale = flipper.flipScale;
-
-                            foreach (LimbBehaviour limb in flipper.PB.Limbs)
-                            {
-                                if (limb == flipper.PB.Limbs[1]) flipper.moveA = head.transform.position;
-                            }
-
-                            moveDif = flipper.moveB - flipper.moveA;
-
-                            flipper.PB.AngleOffset *= -1f;
-                            flipper.PB.transform.position = new Vector2(flipper.PB.transform.position.x + moveDif.x, flipper.PB.transform.position.y);
-
-                            foreach (LimbBehaviour limb in flipper.PB.Limbs) if (limb.HasJoint) limb.Broken = false;
-                            
-                            GripBehaviour[] grips = flipper.PB.GetComponentsInChildren<GripBehaviour>();
-                            
-                            foreach (GripBehaviour grip in grips)
-                            {
-                                if (grip.isHolding)
-                                {
-                                    hObj = grip.CurrentlyHolding;
-
-                                    // Break joint
-                                    while (Itemjoint = grip.gameObject.GetComponent<FixedJoint2D>())
-                                    {
-                                        UnityEngine.Object.DestroyImmediate(Itemjoint);
-                                    }
-                                    
-                                    //  Flip Item
-                                    Vector3 theScale = hObj.transform.localScale;
-                                    theScale.x *= -1.0f;
-                                    hObj.transform.localScale = theScale;
-
-                                    //  Set new item rotation
-                                    hObj.transform.rotation = Quaternion.Euler(
-                                        0.0f, 0.0f,
-                                        grip.GetComponentInParent<Rigidbody2D>().rotation + 95.0f * (flipper.PB.transform.localScale.x < 0.0f ? 1.0f : -1.0f));
-
-                                    //  Move item to flipped position
-                                    Vector2 GripPoint = hObj.GetNearestLocalHoldingPoint(grip.transform.TransformPoint(grip.GripPosition), out float distance);
-                                    hObj.transform.position += grip.transform.TransformPoint(grip.GripPosition) - 
-                                        hObj.transform.TransformPoint(GripPoint);
-                                    
-                                    //  Create new joint
-                                    FixedJoint2D joint;
-                                    joint                 = grip.gameObject.AddComponent<FixedJoint2D>();
-                                    joint.connectedBody   = hObj.rigidbody;
-                                    joint.anchor          = (Vector2)grip.GripPosition;
-                                    joint.connectedAnchor = GripPoint;
-                                    joint.enableCollision = false;
-
-                                    NoFlip.Add(hObj.GetHashCode());
-
-                                }
-                            }
-
-                            ++countedHumans;
-                        }
+                        JointAngleLimits2D t     = limb.Joint.limits;
+                        t.min *= -1f;
+                        t.max *= -1f;
+                        limb.Joint.limits        = t;
+                        limb.OriginalJointLimits = new Vector2(limb.OriginalJointLimits.x * -1f, limb.OriginalJointLimits.y * -1f);
                     }
                 }
             }
 
-            foreach (PhysicalBehaviour Selected in ItemsToFlip)
-            {
-                PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
+            Transform headT = flipper.PB.gameObject.transform.GetChild(5);
 
-                if (!PBO)
+            if (headT)
+{
+                head = headT.GetComponent<Rigidbody2D>();
+
+                flipper.PB.transform.localScale = flipper.flipScale;
+
+                foreach (LimbBehaviour limb in flipper.PB.Limbs)
+{
+                    if (limb == flipper.PB.Limbs[1]) flipper.moveA = head.transform.position;
+                }
+                moveDif = flipper.moveB - flipper.moveA;
+                flipper.PB.AngleOffset *= -1f;
+                flipper.PB.transform.position = new Vector2(flipper.PB.transform.position.x + moveDif.x, flipper.PB.transform.position.y);
+
+                foreach (LimbBehaviour limb in flipper.PB.Limbs) if (limb.HasJoint) limb.Broken = false;
+                GripBehaviour[] grips = flipper.PB.GetComponentsInChildren<GripBehaviour>();
+                foreach (GripBehaviour grip in grips)
                 {
-                    if (NoFlip.Contains(Selected.GetHashCode())) continue;
+                    if (grip.isHolding)
+                    {
+                        hObj = grip.CurrentlyHolding;
 
-                    countedItems++;
+                        // Break joint
+                        while (Itemjoint = grip.gameObject.GetComponent<FixedJoint2D>())
+                        {
+                            UnityEngine.Object.DestroyImmediate(Itemjoint);
+                        }
 
-                    Vector3 theScale = Selected.transform.localScale;
-                    theScale.x *= -1;
-                    Selected.transform.localScale = theScale;
+                        //  Flip Item
+                        Vector3 theScale = hObj.transform.localScale;
+                        theScale.x *= -1.0f;
+                        hObj.transform.localScale = theScale;
+
+                        //  Set new item rotation
+                        hObj.transform.rotation = Quaternion.Euler(
+                            0.0f, 0.0f,
+                            grip.GetComponentInParent<Rigidbody2D>().rotation + 95.0f * (flipper.PB.transform.localScale.x < 0.0f ? 1.0f : -1.0f)
+                        );
+
+                        //  Move item to flipped position
+                        Vector2 GripPoint = hObj.GetNearestLocalHoldingPoint(grip.transform.TransformPoint(grip.GripPosition), out float distance);
+                        hObj.transform.position += grip.transform.TransformPoint(grip.GripPosition) -
+                            hObj.transform.TransformPoint(GripPoint);
+
+                        //  Create new joint
+                        FixedJoint2D joint;
+                        joint                 = grip.gameObject.AddComponent<FixedJoint2D>();
+                        joint.connectedBody   = hObj.rigidbody;
+                        joint.anchor          = (Vector2)grip.GripPosition;
+                        joint.connectedAnchor = GripPoint;
+                        joint.enableCollision = false;
+
+                        NoFlip.Add(hObj.GetHashCode());
+                    }
                 }
             }
+            return true;
+        }
 
-            if (Mulligan.verboseLevel >= 1) ModAPI.Notify("Items flipped: " + countedItems + "   Humans flipped: " + countedHumans);
+        public bool FlipCar(RandomCarTextureBehaviour CAR)
+        {
+            //
+            //  Obviously theres a more efficient, clever way to do this
+            //  but me aint figured that out yet
+            //
+            //  If the car is moving, or not on a perfectly level surface,
+            //  then shit gets craycray
+            //
+            Vector3 body      = CAR.Body.transform.position;
+            Vector3 frontDoor = CAR.FrontDoor.transform.position;
+            Vector3 backDoor  = CAR.BackDoor.transform.position;
+            Vector3 bonnet    = CAR.Bonnet.transform.position;
+            Vector3 boot      = CAR.Boot.transform.position;
+            Vector3 theScale  = CAR.transform.localScale;
+
+
+            NoFlip.Add(CAR.Body.GetComponent<PhysicalBehaviour>().GetHashCode());
+            NoFlip.Add(CAR.FrontDoor.GetComponent<PhysicalBehaviour>().GetHashCode());
+            NoFlip.Add(CAR.BackDoor.GetComponent<PhysicalBehaviour>().GetHashCode());
+            NoFlip.Add(CAR.Bonnet.GetComponent<PhysicalBehaviour>().GetHashCode());
+            NoFlip.Add(CAR.Boot.GetComponent<PhysicalBehaviour>().GetHashCode());
+
+            theScale.x *= -1.0f;
+
+            float flipMod = (theScale.x < 0.0f) ? -1.0f : 1.0f;
+
+            CAR.transform.localScale = theScale;
+
+            Vector3 bodyFlipped = CAR.Body.transform.position;
+
+            float distance = body.x - frontDoor.x;
+            if (Math.Abs(distance) < 1.0f)
+            {
+                theScale = CAR.FrontDoor.transform.localScale;
+                theScale.x *= -1;
+                CAR.FrontDoor.transform.localScale = theScale;
+                CAR.FrontDoor.transform.position = new Vector3(bodyFlipped.x - (-0.6f * flipMod), bodyFlipped.y + 0.05f);
+                CAR.FrontDoor.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            }
+
+            distance = body.x - backDoor.x;
+            if (Math.Abs(distance) < 1.5f)
+            {
+                theScale = CAR.BackDoor.transform.localScale;
+                theScale.x *= -1;
+                CAR.BackDoor.transform.localScale = theScale;
+                CAR.BackDoor.transform.position = new Vector3(bodyFlipped.x - (1.05f * flipMod), bodyFlipped.y + 0.05f);
+                CAR.BackDoor.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            }
+
+            distance = body.x - bonnet.x;
+            if (Math.Abs(distance) < 3.0f)
+            {
+                theScale = CAR.Bonnet.transform.localScale;
+                theScale.x *= -1;
+                CAR.Bonnet.transform.localScale = theScale;
+                CAR.Bonnet.transform.position = new Vector3(bodyFlipped.x - (-2.4f * flipMod), bodyFlipped.y + 0.1f);
+                CAR.Bonnet.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            }
+
+            distance = body.x - boot.x;
+            if (Math.Abs(distance) < 3.1f)
+            {
+                theScale = CAR.Boot.transform.localScale;
+                theScale.x *= -1;
+                CAR.Boot.transform.localScale = theScale;
+                CAR.Boot.transform.position = new Vector3(bodyFlipped.x - (3.0f * flipMod), bodyFlipped.y + 0.2f);
+                CAR.Boot.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+            }
+
+            foreach (Joint2D TireJoint in CAR.GetComponents<Joint2D>())
+            {
+                GameObject Tire = TireJoint.connectedBody.gameObject;
+
+                if (Tire.name == "Wheel1")
+                {
+                    Tire.transform.position = new Vector3(bodyFlipped.x - (2.0f * flipMod), Tire.transform.position.y);
+                } 
+                else if(Tire.name == "Wheel2")
+                {
+                    Tire.transform.position = new Vector3(bodyFlipped.x - (-2.2f * flipMod), Tire.transform.position.y);
+                }
+                
+            }
+
+            return true;
         }
 
         // - - - - - - - - - - - - - - - - - - -
@@ -462,7 +552,6 @@ namespace Mulligan
                 LastSceneNumber.ToString(),
                 new DialogButton("Save", true, new UnityAction[1] { (UnityAction) (() => SaveSceneNum(dialog)) }), 
                 new DialogButton("Cancel", true, (UnityAction[])Array.Empty<UnityAction>()));
-
 
             void SaveSceneNum(DialogBox d)
             {
@@ -554,7 +643,6 @@ namespace Mulligan
             {
                 SelectedObject.gameObject.SetLayer(isBackground ? 2 : 9);
             }
-
 
         }
 
@@ -746,7 +834,6 @@ namespace Mulligan
 
         public void ReapplyLayerOrder()
         {
-
             //  Now reapply the previous layer settings
             //
             if (SortingLayersList.Count > 0)
@@ -768,9 +855,6 @@ namespace Mulligan
                 }
             }
         }
-
-
-        
     }
 }
 
