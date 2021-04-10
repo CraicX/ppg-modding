@@ -5,7 +5,6 @@ using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
-using static Mulligan.MulliganBehaviour;
 
 namespace Mulligan
 {
@@ -103,18 +102,38 @@ namespace Mulligan
             int             peepsDropped    = 0;
             int             verbose         = Mulligan.verboseLevel;
 
+            List<PhysicalBehaviour> JustHeld = new List<PhysicalBehaviour>();
+
             Mulligan.verboseLevel = 0;
 
             //  Look for peeps and find their front arm
             foreach (PhysicalBehaviour Selected in SelectionController.Main.SelectedObjects)
             {
-                PBO = Selected.gameObject.GetComponentInParent<PersonBehaviour>();
-                if (!PBO) continue;
+                PBO = Selected.GetComponentInParent<PersonBehaviour>();
+                
+                //  Check if this is an item being held by person
+                if (!PBO)
+                {
+                    if (Selected.beingHeldByGripper && !JustHeld.Contains(Selected))
+                    {
+                        foreach (FixedJoint2D TmpJoint in FindObjectsOfType<FixedJoint2D>())
+                        {
+                            if (TmpJoint.connectedBody == Selected.GetComponent<Rigidbody2D>())
+                            {
+                                PBO = TmpJoint.gameObject.GetComponentInParent<PersonBehaviour>();
+                                break;
+                            }
+                        }
+                    }
+                    if (!PBO) continue;
+                }
 
-                LowerArm = PBO.transform.GetChild(9).transform.GetChild(1).GetComponent<Rigidbody2D>();
+                LowerArm = PBO.transform.Find("FrontArm").transform.Find("LowerArmFront").GetComponent<Rigidbody2D>();
+                
                 if (!LowerArm) continue;
 
                 if (PeepsWithItems.Contains(LowerArm.GetInstanceID())) continue;
+
                 PeepsWithItems.Add(LowerArm.GetInstanceID());
 
                 Collider2D[] noCollide;
@@ -126,8 +145,6 @@ namespace Mulligan
                     //  We is already holding, so drop it
                     FixedJoint2D Itemjoint;
                     GB.isHolding = false;
-                    GB.CurrentlyHolding.IsWeightless = false;
-                    GB.CurrentlyHolding.MakeWeightful();
 
                     //  Need to loop through these incase PickUpNearestObject() was also triggered
                     //  and created its own joint
@@ -137,7 +154,12 @@ namespace Mulligan
                     }
 
                     GB.CurrentlyHolding.beingHeldByGripper = false;
+
+                    GB.CurrentlyHolding.IsWeightless = false;
+                    GB.CurrentlyHolding.MakeWeightful();
+                    
                     GB.CurrentlyHolding = (PhysicalBehaviour)null;
+
 
                     ++peepsDropped;
 
@@ -180,6 +202,8 @@ namespace Mulligan
                     FlipSelectedItems(FlipList);
                 }
 
+                JustHeld.Add(phys);
+
                 phys.IsWeightless = true;
                 phys.MakeWeightless();
 
@@ -214,7 +238,6 @@ namespace Mulligan
                 joint.enableCollision = false;
 
                 //  Disables collisions between the object and person holding it.
-                //  But do they remain disabled when the object switches owners?
                 noCollide = GB.transform.root.GetComponentsInChildren<Collider2D>();
                 foreach (Collider2D componentsInChild in phys.transform.root.GetComponentsInChildren<Collider2D>())
                 {
@@ -488,8 +511,8 @@ namespace Mulligan
                 theScale = CAR.FrontDoor.transform.localScale;
                 theScale.x *= -1;
                 CAR.FrontDoor.transform.localScale = theScale;
-                CAR.FrontDoor.transform.position = new Vector3(bodyFlipped.x - (-0.6f * flipMod), bodyFlipped.y + 0.05f);
-                CAR.FrontDoor.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+                CAR.FrontDoor.transform.position   = new Vector3(bodyFlipped.x - (-0.6f * flipMod), bodyFlipped.y + 0.05f);
+                CAR.FrontDoor.transform.rotation   = Quaternion.Euler(0.0f, 0.0f, 0.0f);
             }
 
             distance = body.x - backDoor.x;
@@ -498,8 +521,8 @@ namespace Mulligan
                 theScale = CAR.BackDoor.transform.localScale;
                 theScale.x *= -1;
                 CAR.BackDoor.transform.localScale = theScale;
-                CAR.BackDoor.transform.position = new Vector3(bodyFlipped.x - (1.05f * flipMod), bodyFlipped.y + 0.05f);
-                CAR.BackDoor.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+                CAR.BackDoor.transform.position   = new Vector3(bodyFlipped.x - (1.05f * flipMod), bodyFlipped.y + 0.05f);
+                CAR.BackDoor.transform.rotation   = Quaternion.Euler(0.0f, 0.0f, 0.0f);
             }
 
             distance = body.x - bonnet.x;
@@ -508,8 +531,8 @@ namespace Mulligan
                 theScale = CAR.Bonnet.transform.localScale;
                 theScale.x *= -1;
                 CAR.Bonnet.transform.localScale = theScale;
-                CAR.Bonnet.transform.position = new Vector3(bodyFlipped.x - (-2.4f * flipMod), bodyFlipped.y + 0.1f);
-                CAR.Bonnet.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+                CAR.Bonnet.transform.position   = new Vector3(bodyFlipped.x - (-2.4f * flipMod), bodyFlipped.y + 0.1f);
+                CAR.Bonnet.transform.rotation   = Quaternion.Euler(0.0f, 0.0f, 0.0f);
             }
 
             distance = body.x - boot.x;
@@ -518,8 +541,8 @@ namespace Mulligan
                 theScale = CAR.Boot.transform.localScale;
                 theScale.x *= -1;
                 CAR.Boot.transform.localScale = theScale;
-                CAR.Boot.transform.position = new Vector3(bodyFlipped.x - (3.0f * flipMod), bodyFlipped.y + 0.2f);
-                CAR.Boot.transform.rotation = Quaternion.Euler(0.0f, 0.0f, 0.0f);
+                CAR.Boot.transform.position   = new Vector3(bodyFlipped.x - (3.0f * flipMod), bodyFlipped.y + 0.2f);
+                CAR.Boot.transform.rotation   = Quaternion.Euler(0.0f, 0.0f, 0.0f);
             }
 
             foreach (Joint2D TireJoint in CAR.GetComponents<Joint2D>())
